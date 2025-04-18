@@ -25,12 +25,13 @@ end top_basys3;
 architecture top_basys3_arch of top_basys3 is
 
     -- signal declarations
-    signal w_Hex : std_logic_vector(3 downto 0);
+    signal w_Hex_elevator1 : std_logic_vector(3 downto 0);
     signal w_elevator_clk : std_logic;
     signal w_sevenseg_clk : std_logic;
     signal w_fsm_reset : std_logic;
     signal w_clk_reset : std_logic;
     signal w_TDM : std_logic_vector(3 downto 0);
+    signal w_Hex_elevator2 : std_logic_vector(3 downto 0);
     
   
 	-- component declarations
@@ -82,12 +83,20 @@ begin
        ); 	
        
        
-     elevator_controller_fsm_uut:  elevator_controller_fsm port map(
+     elevator1_controller_fsm_uut:  elevator_controller_fsm port map(
         i_clk => w_elevator_clk,
         i_reset => w_fsm_reset,
         is_stopped => sw(0),
         go_up_down => sw(1),
-        o_floor => w_Hex
+        o_floor => w_Hex_elevator1
+        );
+        
+      elevator2_controller_fsm_uut:  elevator_controller_fsm port map(
+        i_clk => w_elevator_clk,
+        i_reset => w_fsm_reset,
+        is_stopped => sw(14),
+        go_up_down => sw(15),
+        o_floor => w_Hex_elevator2
         );
         
      TDM4_uut: TDM4
@@ -96,9 +105,9 @@ begin
        i_clk => w_sevenseg_clk,
        i_reset => btnU,
        i_D3 => "1111",
-       i_D2 => "1111",
+       i_D2 => w_Hex_elevator2,
        i_D1 => "1111",
-       i_D0 => w_Hex,
+       i_D0 => w_Hex_elevator1,
        o_data => w_TDM,
        o_sel => an
        );
@@ -128,11 +137,11 @@ begin
 	-- leave unused switches UNCONNECTED. Ignore any warnings this causes.
 	
 	-- reset signals
-	masterResetproc : process(btnU)
+	masterResetproc : process(btnU,btnL,btnR)
 	begin
-     if btnU = '1' then
-        w_clk_reset <= '1';
+     if btnU = '1' then    
         w_fsm_reset <= '1';
+        w_clk_reset <= '1';   
      else
         w_clk_reset <= btnL;
         w_fsm_reset <= btnR;
