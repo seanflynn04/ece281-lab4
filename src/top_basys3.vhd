@@ -26,7 +26,11 @@ architecture top_basys3_arch of top_basys3 is
 
     -- signal declarations
     signal w_Hex : std_logic_vector(3 downto 0);
-    signal w_clk : std_logic;
+    signal w_elevator_clk : std_logic;
+    signal w_sevenseg_clk : std_logic;
+    signal w_fsm_reset : std_logic;
+    signal w_clk_reset : std_logic;
+    
   
 	-- component declarations
     component sevenseg_decoder is
@@ -82,8 +86,8 @@ begin
        an(3) <= '1';
        
      elevator_controller_fsm_uut:  elevator_controller_fsm port map(
-        i_clk => w_clk,
-        i_reset => btnR,
+        i_clk => w_elevator_clk,
+        i_reset => w_fsm_reset,
         is_stopped => sw(0),
         go_up_down => sw(1),
         o_floor => w_Hex
@@ -93,14 +97,14 @@ begin
         generic map ( k_DIV => 25000000 ) -- 1 Hz clock from 100 MHz
         port map (						  
             i_clk   => clk,
-            i_reset => btnL,
-            o_clk   => w_clk
+            i_reset => w_clk_reset,
+            o_clk   => w_sevenseg_clk
         );    
         
 	-- CONCURRENT STATEMENTS ----------------------------
 	
 	-- LED 15 gets the FSM slow clock signal. The rest are grounded.
-    led(15) <= w_clk;
+    led(15) <= w_elevator_clk;
 	led(14 downto 0) <= (others => '0');
 	-- leave unused switches UNCONNECTED. Ignore any warnings this causes.
 	
@@ -108,7 +112,11 @@ begin
 	masterResetproc : process(btnU)
 	begin
      if btnU = '1' then
-        btnR <= '1' and btnU <= '1'
+        w_clk_reset <= '1';
+        w_fsm_reset <= '1';
+     else
+        w_clk_reset <= btnL;
+        w_fsm_reset <= btnR;
      end if;
     end process;
      
