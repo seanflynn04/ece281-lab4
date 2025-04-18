@@ -30,6 +30,7 @@ architecture top_basys3_arch of top_basys3 is
     signal w_sevenseg_clk : std_logic;
     signal w_fsm_reset : std_logic;
     signal w_clk_reset : std_logic;
+    signal w_TDM : std_logic_vector(3 downto 0);
     
   
 	-- component declarations
@@ -64,7 +65,7 @@ architecture top_basys3_arch of top_basys3 is
     end component TDM4;
      
 	component clock_divider is
-        generic ( constant k_DIV : natural := 2	); -- How many clk cycles until slow clock toggles
+        generic ( constant k_DIV : natural := 25000000); -- How many clk cycles until slow clock toggles
                                                    -- Effectively, you divide the clk double this 
                                                    -- number (e.g., k_DIV := 2 --> clock divider of 4)
         port ( 	i_clk    : in std_logic;
@@ -76,14 +77,10 @@ architecture top_basys3_arch of top_basys3 is
 begin
 	-- PORT MAPS ----------------------------------------
      sevenseg_decoder_uut: sevenseg_decoder port map(
-        i_Hex => w_Hex,
+        i_Hex => w_TDM,
         o_seg_n => seg
        ); 	
        
-       an(0) <= '0';
-       an(1) <= '1';
-       an(2) <= '1';
-       an(3) <= '1';
        
      elevator_controller_fsm_uut:  elevator_controller_fsm port map(
         i_clk => w_elevator_clk,
@@ -92,13 +89,35 @@ begin
         go_up_down => sw(1),
         o_floor => w_Hex
         );
-	
-	  clkdiv_inst : clock_divider 		--instantiation of clock_divider to take 
-        generic map ( k_DIV => 25000000 ) -- 1 Hz clock from 100 MHz
+        
+     TDM4_uut: TDM4
+      generic map(k_WIDTH => 4) -- bits in input and output
+       port map ( 
+       i_clk => w_sevenseg_clk,
+       i_reset => btnU,
+       i_D3 => "1111",
+       i_D2 => "1111",
+       i_D1 => "1111",
+       i_D0 => w_Hex,
+       o_data => w_TDM,
+       o_sel => an
+       );
+        
+      
+	  clkdiv_sevenseg_inst : clock_divider 		--instantiation of clock_divider to take 
+        generic map ( k_DIV => 100000 ) -- 1 Hz clock from 100 MHz
         port map (						  
             i_clk   => clk,
             i_reset => w_clk_reset,
             o_clk   => w_sevenseg_clk
+        );    
+        
+       clkdiv_elevator_inst : clock_divider 		--instantiation of clock_divider to take 
+        generic map ( k_DIV => 50000000 ) -- 1 Hz clock from 100 MHz
+        port map (						  
+            i_clk   => clk,
+            i_reset => w_clk_reset,
+            o_clk   => w_elevator_clk
         );    
         
 	-- CONCURRENT STATEMENTS ----------------------------
